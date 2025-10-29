@@ -33,7 +33,7 @@ from src.reports import (
     ExcelReportGenerator,
     DashboardGenerator
 )
-from src.reports.ppt_generator_v2 import PowerPointGeneratorV2
+from src.reports.ppt_generator_v3 import PowerPointGeneratorV3
 
 
 def preparar_dados_exemplo():
@@ -88,50 +88,60 @@ def preparar_dados_exemplo():
 
 
 def gerar_cenarios(scores, generos_dict):
-    """Gera os 7 cenários de análise com diferentes níveis de correção"""
+    """Gera os 7 cenários de análise - INVERTIDO: Cenário 1 SEM viés"""
     print("=" * 80)
     print("GERANDO 7 CENÁRIOS DE ANÁLISE".center(80))
     print("=" * 80 + "\n")
+    print("NOTA: Cenário 1 = SEM viés (dados limpos)")
+    print("      Cenários 2-7 = COM viés progressivo (teste do framework)\n")
 
     analyzer = BiasAnalyzer(threshold_vies=0.05, alpha=0.05)
     corrector = BiasCorrector()
 
-    # Agrupa scores por gênero original
-    scores_por_genero_antes = {
+    # Primeiro, REMOVE qualquer viés existente para criar o Cenário 1 limpo
+    resultado_limpeza = corrector.aplicar_reponderacao(
+        scores, generos_dict, aplicar_correcao=True
+    )
+    scores_limpos = resultado_limpeza.scores_ajustados
+
+    # Agrupa scores limpos por gênero
+    scores_por_genero_limpos = {
         Genero.FEMININO: [],
         Genero.MASCULINO: []
     }
 
-    for pessoa_id, score in scores.items():
+    for pessoa_id, score in scores_limpos.items():
         genero = generos_dict.get(pessoa_id)
         if genero in [Genero.FEMININO, Genero.MASCULINO]:
-            scores_por_genero_antes[genero].append(score)
+            scores_por_genero_limpos[genero].append(score)
 
-    # Analisa viés original
-    analise_antes = analyzer.analisar_vies_genero(scores_por_genero_antes)
+    # Analisa scores limpos
+    analise_limpos = analyzer.analisar_vies_genero(scores_por_genero_limpos)
 
-    # Aplica correção total
-    resultado_correcao = corrector.aplicar_reponderacao(
-        scores, generos_dict, aplicar_correcao=True
-    )
-
-    # Define 7 cenários com diferentes níveis de correção
+    # Define 7 cenários - INVERTIDO!
+    # Cenário 1 = 0% viés (limpo)
+    # Cenários 2-7 = viés progressivo aplicado
     cenarios = {}
-    niveis_correcao = [0, 16.67, 33.33, 50, 66.67, 83.33, 100]  # 0% a 100% em 7 passos
+    niveis_vies = [0, 16.67, 33.33, 50, 66.67, 83.33, 100]  # 0% a 100% de VIÉS aplicado
 
-    for idx, nivel in enumerate(niveis_correcao, 1):
-        # Aplica percentual de correção
+    for idx, nivel_vies in enumerate(niveis_vies, 1):
+        # Calcula quanto de viés aplicar
+        # Cenário 1: usa scores limpos
+        # Cenários 2-7: interpolam de volta para os scores originais (com viés)
+
         scores_por_genero_cenario = {
             Genero.FEMININO: [],
             Genero.MASCULINO: []
         }
 
-        for pessoa_id, score_orig in scores.items():
+        for pessoa_id, score_limpo in scores_limpos.items():
             genero = generos_dict.get(pessoa_id)
             if genero in [Genero.FEMININO, Genero.MASCULINO]:
-                score_corrigido = resultado_correcao.scores_ajustados[pessoa_id]
-                # Interpola entre original e corrigido
-                score_final = score_orig + (score_corrigido - score_orig) * (nivel / 100.0)
+                score_original = scores[pessoa_id]  # Score com viés
+
+                # Interpola de limpo para viesado
+                # 0% = totalmente limpo, 100% = totalmente viesado
+                score_final = score_limpo + (score_original - score_limpo) * (nivel_vies / 100.0)
                 scores_por_genero_cenario[genero].append(score_final)
 
         # Converte para strings
@@ -143,96 +153,108 @@ def gerar_cenarios(scores, generos_dict):
         # Analisa
         analise_cenario = analyzer.analisar_vies_genero(scores_por_genero_cenario)
 
-        # Define título baseado no nível
-        if nivel == 0:
-            titulo = f'Cenário {idx} - Sem Correção (0%)'
-            descricao = 'Dados brutos sem aplicação de correções'
-        elif nivel < 50:
-            titulo = f'Cenário {idx} - Correção Mínima ({nivel:.0f}%)'
-            descricao = f'Aplicação de {nivel:.0f}% de correção de viés'
-        elif nivel == 50:
-            titulo = f'Cenário {idx} - Correção Moderada ({nivel:.0f}%)'
-            descricao = 'Aplicação de 50% de correção de viés'
-        elif nivel < 100:
-            titulo = f'Cenário {idx} - Correção Forte ({nivel:.0f}%)'
-            descricao = f'Aplicação de {nivel:.0f}% de correção de viés'
+        # Define título baseado no nível DE VIÉS
+        if nivel_vies == 0:
+            titulo = f'Cenário {idx} - Sem Viés (Dados Limpos)'
+            descricao = 'Dados equitativos sem viés de gênero - estado ideal'
+        elif nivel_vies < 50:
+            titulo = f'Cenário {idx} - Viés Leve ({nivel_vies:.0f}%)'
+            descricao = f'Viés leve aplicado ({nivel_vies:.0f}%) para teste do framework'
+        elif nivel_vies == 50:
+            titulo = f'Cenário {idx} - Viés Moderado ({nivel_vies:.0f}%)'
+            descricao = 'Viés moderado típico de cenários reais'
+        elif nivel_vies < 100:
+            titulo = f'Cenário {idx} - Viés Severo ({nivel_vies:.0f}%)'
+            descricao = f'Viés severo ({nivel_vies:.0f}%) para demonstração extrema'
         else:
-            titulo = f'Cenário {idx} - Correção Total (100%)'
-            descricao = 'Correção completa de viés aplicada'
+            titulo = f'Cenário {idx} - Viés Máximo (100%)'
+            descricao = 'Viés máximo - pior cenário possível'
 
         print(f"{titulo}")
         print(f"  Média Feminino: {analise_cenario.estatisticas_feminino.media:.2f}")
         print(f"  Média Masculino: {analise_cenario.estatisticas_masculino.media:.2f}")
         print(f"  Diferença: {analise_cenario.diferenca_medias:.3f}")
-        print(f"  P-value: {analise_cenario.p_value:.4f}\n")
+        print(f"  P-value: {analise_cenario.p_value:.4f}")
+        if analise_cenario.vies_detectado:
+            print(f"  Status: ⚠️ VIÉS DETECTADO\n")
+        else:
+            print(f"  Status: ✅ SEM VIÉS\n")
 
         cenarios[f'cenario_{idx}'] = {
             'titulo': titulo,
             'descricao': descricao,
+            'nivel_vies': nivel_vies,  # Nível de VIÉS aplicado
             'scores_por_genero': scores_por_genero_str,
             'medias_antes': {
-                'Feminino': analise_antes.estatisticas_feminino.media,
-                'Masculino': analise_antes.estatisticas_masculino.media
+                'Feminino': analise_limpos.estatisticas_feminino.media,
+                'Masculino': analise_limpos.estatisticas_masculino.media
             },
             'medias_depois': {
                 'Feminino': analise_cenario.estatisticas_feminino.media,
                 'Masculino': analise_cenario.estatisticas_masculino.media
             },
-            'diferenca_antes': analise_antes.diferenca_medias,
+            'diferenca_antes': analise_limpos.diferenca_medias,
             'diferenca_depois': analise_cenario.diferenca_medias,
-            'p_value_antes': analise_antes.p_value,
+            'p_value_antes': analise_limpos.p_value,
             'p_value_depois': analise_cenario.p_value,
-            'todos_scores': scores_por_genero_str['Feminino'] + scores_por_genero_str['Masculino']
+            'todos_scores': scores_por_genero_str['Feminino'] + scores_por_genero_str['Masculino'],
+            'vies_detectado': analise_cenario.vies_detectado
         }
 
-    return cenarios, analise_antes, resultado_correcao.analise_pos_ajuste
+    return cenarios, analise_limpos, analise_cenario
 
 
 def demo_graficos(cenarios):
-    """Demonstra geração de gráficos"""
+    """Demonstra geração de gráficos - TODOS os 8 gráficos para CADA cenário"""
     print("\n" + "=" * 80)
-    print("DEMO 1: GRÁFICOS PNG EM ALTA RESOLUÇÃO".center(80))
+    print("DEMO 1: GRÁFICOS PNG EM ALTA RESOLUÇÃO (56 GRÁFICOS TOTAIS)".center(80))
     print("=" * 80 + "\n")
+    print("Gerando 8 gráficos para cada um dos 7 cenários...\n")
 
-    generator = GraphGenerator(output_dir="reports/graficos", dpi=300)
+    todos_graficos = {}
 
-    # Usa dados do cenário 3 para exemplo completo
-    dados = cenarios['cenario_3']
+    for key, dados_cenario in cenarios.items():
+        num_cenario = int(key.split('_')[1])
+        print(f"\n--- Gerando gráficos para {dados_cenario['titulo']} ---")
 
-    # Prepara dados adicionais
-    dados['desempenho'] = dados['todos_scores'][:25]
-    dados['potencial'] = list(np.random.uniform(5, 9, 25))
-    dados['generos'] = ['Feminino' if i % 2 == 0 else 'Masculino' for i in range(25)]
+        # Cria subpasta para este cenário
+        generator = GraphGenerator(output_dir=f"reports/graficos/cenario_{num_cenario}", dpi=300)
 
-    dados['scores_por_tipo'] = {
-        'Competências': list(np.random.uniform(6, 9, 30)),
-        '360 Graus': list(np.random.uniform(5, 8, 30)),
-        'OKR': list(np.random.uniform(7, 9, 30)),
-        'Nine Box': dados['todos_scores'][:30]
-    }
+        # Prepara dados completos para este cenário
+        dados = dados_cenario.copy()
 
-    dados['cenarios'] = {
-        'Sem Correção': {
-            'Diferença Médias': abs(cenarios['cenario_1']['diferenca_antes']),
-            'P-value': cenarios['cenario_1']['p_value_antes']
-        },
-        'Correção Parcial': {
-            'Diferença Médias': abs(cenarios['cenario_2']['diferenca_depois']),
-            'P-value': cenarios['cenario_2']['p_value_depois']
-        },
-        'Correção Total': {
-            'Diferença Médias': abs(cenarios['cenario_3']['diferenca_depois']),
-            'P-value': cenarios['cenario_3']['p_value_depois']
+        # Adiciona dados adicionais necessários
+        dados['desempenho'] = dados['todos_scores'][:25]
+        dados['potencial'] = list(np.random.uniform(5, 9, 25))
+        dados['generos'] = ['Feminino' if i % 2 == 0 else 'Masculino' for i in range(25)]
+
+        dados['scores_por_tipo'] = {
+            'Competências': list(np.random.uniform(6, 9, 30)),
+            '360 Graus': list(np.random.uniform(5, 8, 30)),
+            'OKR': list(np.random.uniform(7, 9, 30)),
+            'Nine Box': dados['todos_scores'][:30]
         }
-    }
 
-    # Gera todos os gráficos
-    graficos = generator.gerar_todos_graficos(dados)
+        # Comparativo deste cenário específico
+        dados['cenarios'] = {
+            dados_cenario['titulo']: {
+                'Diferença Médias': abs(dados_cenario['diferenca_depois']),
+                'P-value': dados_cenario['p_value_depois']
+            }
+        }
 
-    print(f"\n✓ {len(graficos)} gráficos gerados com sucesso!")
-    print(f"  Localização: {generator.output_dir}")
+        # Gera todos os 8 gráficos para este cenário
+        graficos_cenario = generator.gerar_todos_graficos(dados)
 
-    return graficos
+        todos_graficos[key] = graficos_cenario
+
+        print(f"✓ {len(graficos_cenario)} gráficos gerados para Cenário {num_cenario}")
+
+    total_graficos = sum(len(g) for g in todos_graficos.values())
+    print(f"\n✓ TOTAL: {total_graficos} gráficos gerados em alta resolução!")
+    print(f"  Localização: reports/graficos/cenario_*/")
+
+    return todos_graficos
 
 
 def demo_excel(cenarios):
@@ -327,20 +349,20 @@ def demo_excel(cenarios):
     return caminho
 
 
-def demo_powerpoint(cenarios, graficos):
-    """Demonstra geração de PowerPoint PROFISSIONAL"""
+def demo_powerpoint(cenarios, todos_graficos):
+    """Demonstra geração de PowerPoint ULTRA DETALHADO"""
     print("\n" + "=" * 80)
-    print("DEMO 3: APRESENTAÇÃO POWERPOINT PROFISSIONAL".center(80))
+    print("DEMO 3: APRESENTAÇÃO POWERPOINT ULTRA DETALHADA".center(80))
     print("=" * 80 + "\n")
 
-    generator = PowerPointGeneratorV2(output_dir="reports/powerpoint")
+    generator = PowerPointGeneratorV3(output_dir="reports/powerpoint")
 
-    caminho = generator.gerar_apresentacao_profissional(
+    caminho = generator.gerar_apresentacao_completa(
         dados_cenarios=cenarios,
-        graficos=graficos if graficos else []
+        todos_graficos=todos_graficos
     )
 
-    print(f"\n✓ Apresentação PowerPoint PROFISSIONAL gerada!")
+    print(f"\n✓ Apresentação PowerPoint ULTRA DETALHADA gerada!")
     print(f"  Localização: {caminho}")
 
     return caminho
@@ -376,14 +398,15 @@ def demo_dashboard(cenarios, pessoas, generos_dict, scores_desempenho, scores_po
 def main():
     """Função principal"""
     print("\n" + "=" * 80)
-    print("DEMONSTRAÇÃO DE RELATÓRIOS AUTOMATIZADOS".center(80))
+    print("DEMONSTRAÇÃO DE RELATÓRIOS AUTOMATIZADOS - V3 ULTRA DETALHADA".center(80))
     print("=" * 80)
     print("\nEste script demonstra a geração automática de:")
-    print("  1. Gráficos PNG em alta resolução (8 gráficos)")
+    print("  1. Gráficos PNG em alta resolução (56 gráficos = 8 por cenário)")
     print("  2. Relatórios Excel formatados (4 abas, 7 cenários)")
-    print("  3. Apresentações PowerPoint (7 cenários com gráficos e tabelas)")
+    print("  3. Apresentações PowerPoint ULTRA DETALHADAS (~70 slides)")
     print("  4. Dashboard HTML interativo (7 abas, um cenário por aba)")
-    print("\n  Os 7 cenários variam de 0% a 100% de correção de viés")
+    print("\n  IMPORTANTE: Cenário 1 = SEM viés (dados limpos)")
+    print("              Cenários 2-7 = COM viés progressivo (0% → 100%)")
     print("\n" + "=" * 80 + "\n")
 
     # Prepara dados
@@ -410,8 +433,10 @@ def main():
     print("=" * 80 + "\n")
 
     print("✓ Gráficos PNG:")
-    print(f"  - {len(graficos)} gráficos em alta resolução (300 DPI)")
-    print(f"  - Localização: reports/graficos/\n")
+    total_graficos = sum(len(g) for g in graficos.values())
+    print(f"  - {total_graficos} gráficos em alta resolução (300 DPI)")
+    print(f"  - {len(graficos)} cenários × 8 gráficos cada")
+    print(f"  - Localização: reports/graficos/cenario_*/\n")
 
     print("✓ Relatório Excel:")
     print(f"  - 4 abas com formatação profissional")
