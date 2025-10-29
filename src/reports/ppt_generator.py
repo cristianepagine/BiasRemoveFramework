@@ -213,17 +213,15 @@ class PowerPointGenerator:
         self._adicionar_slide_titulo(prs, titulo, subtitulo)
         print("✓ Slide 1: Capa")
 
-    def slide_agenda(self, prs: Presentation):
+    def slide_agenda(self, prs: Presentation, num_cenarios: int = 7):
         """Slide 2: Agenda"""
         slide = self._adicionar_slide_conteudo(prs, "Agenda")
 
         pontos = [
             "1. Introdução e Metodologia",
-            "2. Cenário 1: Sem Correção de Viés",
-            "3. Cenário 2: Com Correção Parcial",
-            "4. Cenário 3: Com Correção Total",
-            "5. Análise Comparativa",
-            "6. Conclusões e Recomendações"
+            f"2. Análise de {num_cenarios} Cenários de Correção de Viés",
+            "3. Análise Comparativa",
+            "4. Conclusões e Recomendações"
         ]
 
         self._adicionar_bullet_points(slide, "Agenda", pontos)
@@ -363,12 +361,17 @@ class PowerPointGenerator:
         nome_arquivo: Optional[str] = None
     ) -> Path:
         """
-        Gera apresentação PowerPoint completa.
+        Gera apresentação PowerPoint completa com N cenários.
 
         Args:
             graficos: Lista de caminhos dos gráficos PNG
-            tabelas: Dicionário com DataFrames para tabelas
-            dados_cenarios: Dados dos 3 cenários
+            tabelas: Dicionário com DataFrames para tabelas (chaves: 'cenario_1', 'cenario_2', etc)
+            dados_cenarios: Dados dos cenários (qualquer número)
+                {
+                    'cenario_1': {'titulo': '...', 'descricao': '...'},
+                    'cenario_2': {...},
+                    ...
+                }
             nome_arquivo: Nome do arquivo (opcional)
 
         Returns:
@@ -390,80 +393,46 @@ class PowerPointGenerator:
         self.slide_capa(prs)
 
         # Slide 2: Agenda
-        self.slide_agenda(prs)
+        self.slide_agenda(prs, num_cenarios=len(dados_cenarios))
 
         # Slide 3: Metodologia
         self.slide_metodologia(prs)
 
-        # Cenário 1
-        self.slide_cenario_titulo(
-            prs,
-            1,
-            "Sem Correção de Viés",
-            "Análise dos dados brutos sem aplicar correções"
-        )
+        # Itera pelos cenários dinamicamente
+        idx_grafico = 0
+        for key in sorted(dados_cenarios.keys()):
+            # Extrai número do cenário
+            num_cenario = int(key.split('_')[-1]) if '_' in key else 0
+            dados = dados_cenarios[key]
 
-        # Adiciona gráficos do Cenário 1
-        if len(graficos) > 0:
-            self.slide_grafico(
+            # Slide de título do cenário
+            titulo = dados.get('titulo', f'Cenário {num_cenario}')
+            descricao = dados.get('descricao', f'Análise do {titulo}')
+
+            self.slide_cenario_titulo(
                 prs,
-                "Distribuição de Scores - Cenário 1",
-                graficos[0],
-                "Nota-se diferença significativa entre gêneros"
+                num_cenario,
+                titulo,
+                descricao
             )
 
-        if 'cenario_1' in tabelas:
-            self.slide_tabela_resultados(
-                prs,
-                "Resultados Estatísticos - Cenário 1",
-                tabelas['cenario_1']
-            )
+            # Adiciona gráfico se disponível
+            if idx_grafico < len(graficos) and graficos[idx_grafico].exists():
+                self.slide_grafico(
+                    prs,
+                    f"Distribuição de Scores - {titulo}",
+                    graficos[idx_grafico],
+                    dados.get('observacao_grafico', '')
+                )
+                idx_grafico += 1
 
-        # Cenário 2
-        self.slide_cenario_titulo(
-            prs,
-            2,
-            "Com Correção Parcial",
-            "Aplicação de correção moderada de viés"
-        )
-
-        if len(graficos) > 1:
-            self.slide_grafico(
-                prs,
-                "Distribuição de Scores - Cenário 2",
-                graficos[1],
-                "Redução parcial da diferença entre gêneros"
-            )
-
-        if 'cenario_2' in tabelas:
-            self.slide_tabela_resultados(
-                prs,
-                "Resultados Estatísticos - Cenário 2",
-                tabelas['cenario_2']
-            )
-
-        # Cenário 3
-        self.slide_cenario_titulo(
-            prs,
-            3,
-            "Com Correção Total",
-            "Aplicação completa de correção de viés"
-        )
-
-        if len(graficos) > 2:
-            self.slide_grafico(
-                prs,
-                "Distribuição de Scores - Cenário 3",
-                graficos[2],
-                "Diferença entre gêneros minimizada"
-            )
-
-        if 'cenario_3' in tabelas:
-            self.slide_tabela_resultados(
-                prs,
-                "Resultados Estatísticos - Cenário 3",
-                tabelas['cenario_3']
-            )
+            # Adiciona tabela se disponível
+            if key in tabelas:
+                self.slide_tabela_resultados(
+                    prs,
+                    f"Resultados Estatísticos - {titulo}",
+                    tabelas[key]
+                )
 
         # Análise Comparativa
         self._adicionar_slide_secao(prs, "Análise Comparativa")

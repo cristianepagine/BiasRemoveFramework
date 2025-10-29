@@ -84,7 +84,7 @@ class ExcelReportGenerator:
 
         Args:
             wb: Workbook do openpyxl
-            dados_cenarios: Dados dos 3 cenários
+            dados_cenarios: Dados dos cenários (qualquer número)
                 {
                     'Cenário 1 - Sem Correção': {
                         'Média Feminino': 7.2,
@@ -93,6 +93,7 @@ class ExcelReportGenerator:
                         'P-value': 0.001,
                         'Viés Detectado': 'Sim'
                     },
+                    'Cenário 2 - ...': {...},
                     ...
                 }
         """

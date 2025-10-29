@@ -443,14 +443,15 @@ class DashboardGenerator:
         nome_arquivo: Optional[str] = None
     ) -> Path:
         """
-        Gera dashboard HTML completo com 3 abas (cenários).
+        Gera dashboard HTML completo com N abas (uma por cenário).
 
         Args:
-            dados_cenarios: Dicionário com dados dos 3 cenários:
+            dados_cenarios: Dicionário com dados dos cenários:
                 {
                     'cenario_1': {...},
                     'cenario_2': {...},
-                    'cenario_3': {...}
+                    ...
+                    'cenario_N': {...}
                 }
             nome_arquivo: Nome do arquivo (opcional)
 
@@ -464,21 +465,47 @@ class DashboardGenerator:
 
         print("\n=== Gerando Dashboard HTML Interativo ===\n")
 
-        # Gera HTML para cada cenário
-        html_cenario_1 = self.criar_dashboard_cenario(
-            dados_cenarios.get('cenario_1', {}), 1
-        )
-        print("✓ Cenário 1 processado")
+        # Gera HTML para cada cenário dinamicamente
+        cenarios_html = {}
+        cenarios_titulos = {}
 
-        html_cenario_2 = self.criar_dashboard_cenario(
-            dados_cenarios.get('cenario_2', {}), 2
-        )
-        print("✓ Cenário 2 processado")
+        for key, dados in dados_cenarios.items():
+            # Extrai número do cenário (ex: 'cenario_1' -> 1)
+            num_cenario = int(key.split('_')[-1]) if '_' in key else 0
 
-        html_cenario_3 = self.criar_dashboard_cenario(
-            dados_cenarios.get('cenario_3', {}), 3
-        )
-        print("✓ Cenário 3 processado")
+            html = self.criar_dashboard_cenario(dados, num_cenario)
+            cenarios_html[key] = html
+            cenarios_titulos[key] = dados.get('titulo', f'Cenário {num_cenario}')
+
+            print(f"✓ Cenário {num_cenario} processado")
+
+        # Gera HTML das abas dinamicamente
+        tabs_html = ""
+        tab_contents_html = ""
+
+        for idx, (key, html) in enumerate(cenarios_html.items()):
+            num_cenario = int(key.split('_')[-1]) if '_' in key else idx + 1
+            titulo = cenarios_titulos[key]
+            descricao = dados_cenarios[key].get('descricao', '')
+
+            # Primeira aba fica ativa
+            active_class = "active" if idx == 0 else ""
+
+            # Gera botão da aba
+            tabs_html += f'<button class="tab {active_class}" onclick="openTab(event, \'{key}\')">{titulo}</button>\n        '
+
+            # Gera conteúdo da aba
+            tab_contents_html += f"""
+    <div id="{key}" class="tab-content {active_class}">
+        <div class="container">
+            <h2 style="color: #667eea; margin-bottom: 20px;">{titulo}</h2>
+            <p style="color: #666; margin-bottom: 30px; font-size: 1.1em;">
+                {descricao if descricao else f'Análise do {titulo}'}
+            </p>
+            {html}
+        </div>
+    </div>
+"""
 
         # Template HTML com abas
         html_template = f"""
@@ -624,40 +651,10 @@ class DashboardGenerator:
     </div>
 
     <div class="tabs">
-        <button class="tab active" onclick="openTab(event, 'cenario1')">Cenário 1 - Sem Correção</button>
-        <button class="tab" onclick="openTab(event, 'cenario2')">Cenário 2 - Correção Parcial</button>
-        <button class="tab" onclick="openTab(event, 'cenario3')">Cenário 3 - Correção Total</button>
+        {tabs_html}
     </div>
 
-    <div id="cenario1" class="tab-content active">
-        <div class="container">
-            <h2 style="color: #667eea; margin-bottom: 20px;">Cenário 1: Sem Correção de Viés</h2>
-            <p style="color: #666; margin-bottom: 30px; font-size: 1.1em;">
-                Análise dos dados brutos sem aplicação de correções. Este cenário mostra o estado original das avaliações.
-            </p>
-            {html_cenario_1}
-        </div>
-    </div>
-
-    <div id="cenario2" class="tab-content">
-        <div class="container">
-            <h2 style="color: #667eea; margin-bottom: 20px;">Cenário 2: Com Correção Parcial</h2>
-            <p style="color: #666; margin-bottom: 30px; font-size: 1.1em;">
-                Aplicação de correção moderada de viés. Este cenário demonstra o impacto de uma correção parcial.
-            </p>
-            {html_cenario_2}
-        </div>
-    </div>
-
-    <div id="cenario3" class="tab-content">
-        <div class="container">
-            <h2 style="color: #667eea; margin-bottom: 20px;">Cenário 3: Com Correção Total</h2>
-            <p style="color: #666; margin-bottom: 30px; font-size: 1.1em;">
-                Aplicação completa de correção de viés. Este cenário mostra o resultado da correção máxima possível.
-            </p>
-            {html_cenario_3}
-        </div>
-    </div>
+    {tab_contents_html}
 
     <div class="footer">
         <p><strong>Framework de Redução de Viés</strong></p>

@@ -88,15 +88,15 @@ def preparar_dados_exemplo():
 
 
 def gerar_cenarios(scores, generos_dict):
-    """Gera os 3 cenários de análise"""
+    """Gera os 7 cenários de análise com diferentes níveis de correção"""
     print("=" * 80)
-    print("GERANDO 3 CENÁRIOS DE ANÁLISE".center(80))
+    print("GERANDO 7 CENÁRIOS DE ANÁLISE".center(80))
     print("=" * 80 + "\n")
 
     analyzer = BiasAnalyzer(threshold_vies=0.05, alpha=0.05)
     corrector = BiasCorrector()
 
-    # Agrupa scores por gênero
+    # Agrupa scores por gênero original
     scores_por_genero_antes = {
         Genero.FEMININO: [],
         Genero.MASCULINO: []
@@ -107,136 +107,85 @@ def gerar_cenarios(scores, generos_dict):
         if genero in [Genero.FEMININO, Genero.MASCULINO]:
             scores_por_genero_antes[genero].append(score)
 
-    # Converte para strings para compatibilidade
-    scores_por_genero_antes_str = {
-        'Feminino': scores_por_genero_antes[Genero.FEMININO],
-        'Masculino': scores_por_genero_antes[Genero.MASCULINO]
-    }
-
     # Analisa viés original
     analise_antes = analyzer.analisar_vies_genero(scores_por_genero_antes)
 
-    print("Cenário 1: Sem Correção")
-    print(f"  Média Feminino: {analise_antes.estatisticas_feminino.media:.2f}")
-    print(f"  Média Masculino: {analise_antes.estatisticas_masculino.media:.2f}")
-    print(f"  Diferença: {analise_antes.diferenca_medias:.3f}")
-    print(f"  P-value: {analise_antes.p_value:.4f}\n")
-
-    # Cenário 1: Sem correção
-    cenario_1 = {
-        'titulo': 'Cenário 1 - Sem Correção',
-        'scores_por_genero': scores_por_genero_antes_str,
-        'medias_antes': {
-            'Feminino': analise_antes.estatisticas_feminino.media,
-            'Masculino': analise_antes.estatisticas_masculino.media
-        },
-        'medias_depois': {
-            'Feminino': analise_antes.estatisticas_feminino.media,
-            'Masculino': analise_antes.estatisticas_masculino.media
-        },
-        'diferenca_antes': analise_antes.diferenca_medias,
-        'diferenca_depois': analise_antes.diferenca_medias,
-        'p_value_antes': analise_antes.p_value,
-        'p_value_depois': analise_antes.p_value,
-        'todos_scores': list(scores.values())
-    }
-
-    # Cenário 2: Correção parcial (50%)
-    resultado_parcial = corrector.aplicar_reponderacao(
+    # Aplica correção total
+    resultado_correcao = corrector.aplicar_reponderacao(
         scores, generos_dict, aplicar_correcao=True
     )
 
-    scores_por_genero_parcial = {
-        Genero.FEMININO: [],
-        Genero.MASCULINO: []
-    }
+    # Define 7 cenários com diferentes níveis de correção
+    cenarios = {}
+    niveis_correcao = [0, 16.67, 33.33, 50, 66.67, 83.33, 100]  # 0% a 100% em 7 passos
 
-    for pessoa_id, score in resultado_parcial.scores_ajustados.items():
-        genero = generos_dict.get(pessoa_id)
-        if genero in [Genero.FEMININO, Genero.MASCULINO]:
-            # Aplica 50% da correção
-            score_orig = scores[pessoa_id]
-            score_meio = score_orig + (score - score_orig) * 0.5
-            scores_por_genero_parcial[genero].append(score_meio)
+    for idx, nivel in enumerate(niveis_correcao, 1):
+        # Aplica percentual de correção
+        scores_por_genero_cenario = {
+            Genero.FEMININO: [],
+            Genero.MASCULINO: []
+        }
 
-    scores_por_genero_parcial_str = {
-        'Feminino': scores_por_genero_parcial[Genero.FEMININO],
-        'Masculino': scores_por_genero_parcial[Genero.MASCULINO]
-    }
+        for pessoa_id, score_orig in scores.items():
+            genero = generos_dict.get(pessoa_id)
+            if genero in [Genero.FEMININO, Genero.MASCULINO]:
+                score_corrigido = resultado_correcao.scores_ajustados[pessoa_id]
+                # Interpola entre original e corrigido
+                score_final = score_orig + (score_corrigido - score_orig) * (nivel / 100.0)
+                scores_por_genero_cenario[genero].append(score_final)
 
-    analise_parcial = analyzer.analisar_vies_genero(scores_por_genero_parcial)
+        # Converte para strings
+        scores_por_genero_str = {
+            'Feminino': scores_por_genero_cenario[Genero.FEMININO],
+            'Masculino': scores_por_genero_cenario[Genero.MASCULINO]
+        }
 
-    print("Cenário 2: Correção Parcial (50%)")
-    print(f"  Média Feminino: {analise_parcial.estatisticas_feminino.media:.2f}")
-    print(f"  Média Masculino: {analise_parcial.estatisticas_masculino.media:.2f}")
-    print(f"  Diferença: {analise_parcial.diferenca_medias:.3f}")
-    print(f"  P-value: {analise_parcial.p_value:.4f}\n")
+        # Analisa
+        analise_cenario = analyzer.analisar_vies_genero(scores_por_genero_cenario)
 
-    cenario_2 = {
-        'titulo': 'Cenário 2 - Correção Parcial',
-        'scores_por_genero': scores_por_genero_parcial_str,
-        'medias_antes': {
-            'Feminino': analise_antes.estatisticas_feminino.media,
-            'Masculino': analise_antes.estatisticas_masculino.media
-        },
-        'medias_depois': {
-            'Feminino': analise_parcial.estatisticas_feminino.media,
-            'Masculino': analise_parcial.estatisticas_masculino.media
-        },
-        'diferenca_antes': analise_antes.diferenca_medias,
-        'diferenca_depois': analise_parcial.diferenca_medias,
-        'p_value_antes': analise_antes.p_value,
-        'p_value_depois': analise_parcial.p_value,
-        'todos_scores': scores_por_genero_parcial_str['Feminino'] + scores_por_genero_parcial_str['Masculino']
-    }
+        # Define título baseado no nível
+        if nivel == 0:
+            titulo = f'Cenário {idx} - Sem Correção (0%)'
+            descricao = 'Dados brutos sem aplicação de correções'
+        elif nivel < 50:
+            titulo = f'Cenário {idx} - Correção Mínima ({nivel:.0f}%)'
+            descricao = f'Aplicação de {nivel:.0f}% de correção de viés'
+        elif nivel == 50:
+            titulo = f'Cenário {idx} - Correção Moderada ({nivel:.0f}%)'
+            descricao = 'Aplicação de 50% de correção de viés'
+        elif nivel < 100:
+            titulo = f'Cenário {idx} - Correção Forte ({nivel:.0f}%)'
+            descricao = f'Aplicação de {nivel:.0f}% de correção de viés'
+        else:
+            titulo = f'Cenário {idx} - Correção Total (100%)'
+            descricao = 'Correção completa de viés aplicada'
 
-    # Cenário 3: Correção total
-    scores_por_genero_depois = {
-        Genero.FEMININO: [],
-        Genero.MASCULINO: []
-    }
+        print(f"{titulo}")
+        print(f"  Média Feminino: {analise_cenario.estatisticas_feminino.media:.2f}")
+        print(f"  Média Masculino: {analise_cenario.estatisticas_masculino.media:.2f}")
+        print(f"  Diferença: {analise_cenario.diferenca_medias:.3f}")
+        print(f"  P-value: {analise_cenario.p_value:.4f}\n")
 
-    for pessoa_id, score in resultado_parcial.scores_ajustados.items():
-        genero = generos_dict.get(pessoa_id)
-        if genero in [Genero.FEMININO, Genero.MASCULINO]:
-            scores_por_genero_depois[genero].append(score)
+        cenarios[f'cenario_{idx}'] = {
+            'titulo': titulo,
+            'descricao': descricao,
+            'scores_por_genero': scores_por_genero_str,
+            'medias_antes': {
+                'Feminino': analise_antes.estatisticas_feminino.media,
+                'Masculino': analise_antes.estatisticas_masculino.media
+            },
+            'medias_depois': {
+                'Feminino': analise_cenario.estatisticas_feminino.media,
+                'Masculino': analise_cenario.estatisticas_masculino.media
+            },
+            'diferenca_antes': analise_antes.diferenca_medias,
+            'diferenca_depois': analise_cenario.diferenca_medias,
+            'p_value_antes': analise_antes.p_value,
+            'p_value_depois': analise_cenario.p_value,
+            'todos_scores': scores_por_genero_str['Feminino'] + scores_por_genero_str['Masculino']
+        }
 
-    scores_por_genero_depois_str = {
-        'Feminino': scores_por_genero_depois[Genero.FEMININO],
-        'Masculino': scores_por_genero_depois[Genero.MASCULINO]
-    }
-
-    analise_depois = analyzer.analisar_vies_genero(scores_por_genero_depois)
-
-    print("Cenário 3: Correção Total")
-    print(f"  Média Feminino: {analise_depois.estatisticas_feminino.media:.2f}")
-    print(f"  Média Masculino: {analise_depois.estatisticas_masculino.media:.2f}")
-    print(f"  Diferença: {analise_depois.diferenca_medias:.3f}")
-    print(f"  P-value: {analise_depois.p_value:.4f}\n")
-
-    cenario_3 = {
-        'titulo': 'Cenário 3 - Correção Total',
-        'scores_por_genero': scores_por_genero_depois_str,
-        'medias_antes': {
-            'Feminino': analise_antes.estatisticas_feminino.media,
-            'Masculino': analise_antes.estatisticas_masculino.media
-        },
-        'medias_depois': {
-            'Feminino': analise_depois.estatisticas_feminino.media,
-            'Masculino': analise_depois.estatisticas_masculino.media
-        },
-        'diferenca_antes': analise_antes.diferenca_medias,
-        'diferenca_depois': analise_depois.diferenca_medias,
-        'p_value_antes': analise_antes.p_value,
-        'p_value_depois': analise_depois.p_value,
-        'todos_scores': scores_por_genero_depois_str['Feminino'] + scores_por_genero_depois_str['Masculino']
-    }
-
-    return {
-        'cenario_1': cenario_1,
-        'cenario_2': cenario_2,
-        'cenario_3': cenario_3
-    }, analise_antes, analise_depois
+    return cenarios, analise_antes, resultado_correcao.analise_pos_ajuste
 
 
 def demo_graficos(cenarios):
@@ -296,30 +245,16 @@ def demo_excel(cenarios):
 
     # Prepara dados para as abas
 
-    # Aba 1: Resumo Executivo
-    resumo_executivo = {
-        'Cenário 1 - Sem Correção': {
-            'Média Feminino': cenarios['cenario_1']['medias_depois']['Feminino'],
-            'Média Masculino': cenarios['cenario_1']['medias_depois']['Masculino'],
-            'Diferença': cenarios['cenario_1']['diferenca_depois'],
-            'P-value': cenarios['cenario_1']['p_value_depois'],
-            'Viés Detectado': 'Sim' if cenarios['cenario_1']['p_value_depois'] < 0.05 else 'Não'
-        },
-        'Cenário 2 - Correção Parcial': {
-            'Média Feminino': cenarios['cenario_2']['medias_depois']['Feminino'],
-            'Média Masculino': cenarios['cenario_2']['medias_depois']['Masculino'],
-            'Diferença': cenarios['cenario_2']['diferenca_depois'],
-            'P-value': cenarios['cenario_2']['p_value_depois'],
-            'Viés Detectado': 'Sim' if cenarios['cenario_2']['p_value_depois'] < 0.05 else 'Não'
-        },
-        'Cenário 3 - Correção Total': {
-            'Média Feminino': cenarios['cenario_3']['medias_depois']['Feminino'],
-            'Média Masculino': cenarios['cenario_3']['medias_depois']['Masculino'],
-            'Diferença': cenarios['cenario_3']['diferenca_depois'],
-            'P-value': cenarios['cenario_3']['p_value_depois'],
-            'Viés Detectado': 'Sim' if cenarios['cenario_3']['p_value_depois'] < 0.05 else 'Não'
+    # Aba 1: Resumo Executivo - Gera dinamicamente para todos os cenários
+    resumo_executivo = {}
+    for key, dados in cenarios.items():
+        resumo_executivo[dados['titulo']] = {
+            'Média Feminino': dados['medias_depois']['Feminino'],
+            'Média Masculino': dados['medias_depois']['Masculino'],
+            'Diferença': dados['diferenca_depois'],
+            'P-value': dados['p_value_depois'],
+            'Viés Detectado': 'Sim' if dados['p_value_depois'] < 0.05 else 'Não'
         }
-    }
 
     # Aba 2: Detecção de Viés
     deteccao_vies = pd.DataFrame([
@@ -400,24 +335,14 @@ def demo_powerpoint(cenarios, graficos):
 
     generator = PowerPointGenerator(output_dir="reports/powerpoint")
 
-    # Prepara tabelas
-    tabelas = {
-        'cenario_1': pd.DataFrame([
-            {'Métrica': 'Média Feminino', 'Valor': f"{cenarios['cenario_1']['medias_depois']['Feminino']:.2f}"},
-            {'Métrica': 'Média Masculino', 'Valor': f"{cenarios['cenario_1']['medias_depois']['Masculino']:.2f}"},
-            {'Métrica': 'P-value', 'Valor': f"{cenarios['cenario_1']['p_value_depois']:.4f}"}
-        ]),
-        'cenario_2': pd.DataFrame([
-            {'Métrica': 'Média Feminino', 'Valor': f"{cenarios['cenario_2']['medias_depois']['Feminino']:.2f}"},
-            {'Métrica': 'Média Masculino', 'Valor': f"{cenarios['cenario_2']['medias_depois']['Masculino']:.2f}"},
-            {'Métrica': 'P-value', 'Valor': f"{cenarios['cenario_2']['p_value_depois']:.4f}"}
-        ]),
-        'cenario_3': pd.DataFrame([
-            {'Métrica': 'Média Feminino', 'Valor': f"{cenarios['cenario_3']['medias_depois']['Feminino']:.2f}"},
-            {'Métrica': 'Média Masculino', 'Valor': f"{cenarios['cenario_3']['medias_depois']['Masculino']:.2f}"},
-            {'Métrica': 'P-value', 'Valor': f"{cenarios['cenario_3']['p_value_depois']:.4f}"}
+    # Prepara tabelas dinamicamente para todos os cenários
+    tabelas = {}
+    for key, dados in cenarios.items():
+        tabelas[key] = pd.DataFrame([
+            {'Métrica': 'Média Feminino', 'Valor': f"{dados['medias_depois']['Feminino']:.2f}"},
+            {'Métrica': 'Média Masculino', 'Valor': f"{dados['medias_depois']['Masculino']:.2f}"},
+            {'Métrica': 'P-value', 'Valor': f"{dados['p_value_depois']:.4f}"}
         ])
-    }
 
     caminho = generator.gerar_apresentacao_completa(
         graficos=graficos if graficos else [],
@@ -439,8 +364,8 @@ def demo_dashboard(cenarios, pessoas, generos_dict, scores_desempenho, scores_po
 
     generator = DashboardGenerator(output_dir="reports/dashboards")
 
-    # Adiciona dados de desempenho vs potencial para cada cenário
-    for key in ['cenario_1', 'cenario_2', 'cenario_3']:
+    # Adiciona dados de desempenho vs potencial para todos os cenários
+    for key in cenarios.keys():
         # Pega primeiras 30 pessoas
         pessoas_subset = list(pessoas)[:30]
 
@@ -465,9 +390,10 @@ def main():
     print("=" * 80)
     print("\nEste script demonstra a geração automática de:")
     print("  1. Gráficos PNG em alta resolução (8 gráficos)")
-    print("  2. Relatórios Excel formatados (4 abas)")
-    print("  3. Apresentações PowerPoint (15-20 slides)")
-    print("  4. Dashboard HTML interativo (3 abas)")
+    print("  2. Relatórios Excel formatados (4 abas, 7 cenários)")
+    print("  3. Apresentações PowerPoint (7 cenários com gráficos e tabelas)")
+    print("  4. Dashboard HTML interativo (7 abas, um cenário por aba)")
+    print("\n  Os 7 cenários variam de 0% a 100% de correção de viés")
     print("\n" + "=" * 80 + "\n")
 
     # Prepara dados
@@ -507,7 +433,7 @@ def main():
     print(f"  - Localização: {ppt_path}\n")
 
     print("✓ Dashboard HTML:")
-    print(f"  - Dashboard interativo com 3 abas")
+    print(f"  - Dashboard interativo com {len(cenarios)} abas (7 cenários)")
     print(f"  - Exportável como PDF")
     print(f"  - Localização: {dashboard_path}\n")
 
