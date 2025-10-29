@@ -31,9 +31,9 @@ from src.analytics import (
 from src.reports import (
     GraphGenerator,
     ExcelReportGenerator,
-    PowerPointGenerator,
     DashboardGenerator
 )
+from src.reports.ppt_generator_v2 import PowerPointGeneratorV2
 
 
 def preparar_dados_exemplo():
@@ -328,29 +328,19 @@ def demo_excel(cenarios):
 
 
 def demo_powerpoint(cenarios, graficos):
-    """Demonstra geração de PowerPoint"""
+    """Demonstra geração de PowerPoint PROFISSIONAL"""
     print("\n" + "=" * 80)
-    print("DEMO 3: APRESENTAÇÕES POWERPOINT".center(80))
+    print("DEMO 3: APRESENTAÇÃO POWERPOINT PROFISSIONAL".center(80))
     print("=" * 80 + "\n")
 
-    generator = PowerPointGenerator(output_dir="reports/powerpoint")
+    generator = PowerPointGeneratorV2(output_dir="reports/powerpoint")
 
-    # Prepara tabelas dinamicamente para todos os cenários
-    tabelas = {}
-    for key, dados in cenarios.items():
-        tabelas[key] = pd.DataFrame([
-            {'Métrica': 'Média Feminino', 'Valor': f"{dados['medias_depois']['Feminino']:.2f}"},
-            {'Métrica': 'Média Masculino', 'Valor': f"{dados['medias_depois']['Masculino']:.2f}"},
-            {'Métrica': 'P-value', 'Valor': f"{dados['p_value_depois']:.4f}"}
-        ])
-
-    caminho = generator.gerar_apresentacao_completa(
-        graficos=graficos if graficos else [],
-        tabelas=tabelas,
-        dados_cenarios=cenarios
+    caminho = generator.gerar_apresentacao_profissional(
+        dados_cenarios=cenarios,
+        graficos=graficos if graficos else []
     )
 
-    print(f"\n✓ Apresentação PowerPoint gerada!")
+    print(f"\n✓ Apresentação PowerPoint PROFISSIONAL gerada!")
     print(f"  Localização: {caminho}")
 
     return caminho
