@@ -2,6 +2,27 @@
 
 Este diretório contém todos os relatórios gerados automaticamente pelo framework BiasRemoveFramework.
 
+## ⚠️ IMPORTANTE: Como Gerar os Relatórios
+
+**Os arquivos PowerPoint, Excel e Dashboard HTML NÃO estão no Git** (para evitar corrupção).
+Você precisa **gerá-los localmente** na sua máquina.
+
+### 🚀 Geração Rápida (Recomendado):
+
+```bash
+# Na raiz do projeto, execute:
+python gerar_relatorios.py
+```
+
+Este script irá gerar **TODOS** os relatórios automaticamente!
+
+### 📋 Pré-requisitos:
+
+```bash
+# Certifique-se de ter as dependências instaladas:
+pip install -r requirements.txt
+```
+
 ## 📊 Estrutura dos Relatórios
 
 ### 🎨 Gráficos PNG (`graficos/`)

@@ -49,9 +49,27 @@ pip install -r requirements.txt
 
 ## Uso
 
+### Executar o Framework:
+
 ```bash
 python src/main.py
 ```
+
+### 📊 Gerar Relatórios Automatizados (PowerPoint, Excel, Dashboard HTML):
+
+```bash
+python gerar_relatorios.py
+```
+
+Este script gera automaticamente:
+- ✅ **42 gráficos PNG** em alta resolução (300 DPI)
+- ✅ **Apresentação PowerPoint** completa (~50 slides)
+- ✅ **Relatório Excel** formatado (4 abas)
+- ✅ **Dashboard HTML** interativo
+
+**Os relatórios são salvos em:** `reports/`
+
+**Importante:** Os arquivos PowerPoint e Excel devem ser gerados localmente (não estão no Git para evitar corrupção de arquivos binários).
 
 ## Tecnologias
 

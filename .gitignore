@@ -49,9 +49,10 @@ Thumbs.db
 *.db
 *.sqlite
 
-# Exception: Allow report files
-!reports/**/*.xlsx
-!reports/**/*.pptx
+# Generated reports - should be generated locally, not committed
+reports/powerpoint/*.pptx
+reports/excel/*.xlsx
+reports/dashboards/*.html
 
 # Logs
 *.log
