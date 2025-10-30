@@ -49,5 +49,9 @@ Thumbs.db
 *.db
 *.sqlite
 
+# Exception: Allow report files
+!reports/**/*.xlsx
+!reports/**/*.pptx
+
 # Logs
 *.log
