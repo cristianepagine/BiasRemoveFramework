@@ -55,7 +55,17 @@ pip install -r requirements.txt
 python src/main.py
 ```
 
-### 📊 Gerar Relatórios Automatizados (PowerPoint, Excel, Dashboard HTML):
+### 📊 Relatórios Automatizados (PowerPoint, Excel, Dashboard HTML):
+
+**Opção 1: Baixar arquivos de exemplo prontos** 📥
+
+Os arquivos já estão disponíveis em `reports/`:
+- 📑 `reports/powerpoint/apresentacao_completa_exemplo.pptx` (51 slides)
+- 📋 `reports/excel/relatorio_vies_exemplo.xlsx` (4 abas)
+- 🌐 `reports/dashboards/dashboard_vies_exemplo.html` (interativo)
+- 🎨 `reports/graficos/` (42 gráficos PNG)
+
+**Opção 2: Gerar seus próprios relatórios** 🚀
 
 ```bash
 python gerar_relatorios.py
@@ -68,8 +78,6 @@ Este script gera automaticamente:
 - ✅ **Dashboard HTML** interativo
 
 **Os relatórios são salvos em:** `reports/`
-
-**Importante:** Os arquivos PowerPoint e Excel devem ser gerados localmente (não estão no Git para evitar corrupção de arquivos binários).
 
 ## Tecnologias
 

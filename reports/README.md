@@ -2,19 +2,27 @@
 
 Este diretório contém todos os relatórios gerados automaticamente pelo framework BiasRemoveFramework.
 
-## ⚠️ IMPORTANTE: Como Gerar os Relatórios
+## 📥 Baixar Arquivos de Exemplo
 
-**Os arquivos PowerPoint, Excel e Dashboard HTML NÃO estão no Git** (para evitar corrupção).
-Você precisa **gerá-los localmente** na sua máquina.
+**Arquivos de exemplo já estão disponíveis para download direto do GitHub:**
 
-### 🚀 Geração Rápida (Recomendado):
+- 📑 **PowerPoint**: `reports/powerpoint/apresentacao_completa_exemplo.pptx` (6.1 MB, 51 slides)
+- 📋 **Excel**: `reports/excel/relatorio_vies_exemplo.xlsx` (8.1 KB, 4 abas)
+- 🌐 **Dashboard**: `reports/dashboards/dashboard_vies_exemplo.html` (328 KB, interativo)
+
+**Como baixar:**
+1. Navegue até a pasta desejada no GitHub
+2. Clique no arquivo
+3. Clique em "Download" ou "Raw" para baixar
+
+## 🚀 Ou Gere Seus Próprios Relatórios
+
+Se você quiser gerar relatórios novos com dados atualizados:
 
 ```bash
 # Na raiz do projeto, execute:
 python gerar_relatorios.py
 ```
-
-Este script irá gerar **TODOS** os relatórios automaticamente!
 
 ### 📋 Pré-requisitos:
 
