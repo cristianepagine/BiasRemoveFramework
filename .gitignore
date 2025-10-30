@@ -54,5 +54,10 @@ reports/powerpoint/*.pptx
 reports/excel/*.xlsx
 reports/dashboards/*.html
 
+# Exception: Allow example files
+!reports/powerpoint/*_exemplo.pptx
+!reports/excel/*_exemplo.xlsx
+!reports/dashboards/*_exemplo.html
+
 # Logs
 *.log
