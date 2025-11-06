@@ -88,7 +88,7 @@ def preparar_dados_exemplo():
     return pessoas, generos_dict, scores_ninebox, scores_potencial, avaliacao_ninebox
 
 
-def detectar_e_remover_outliers(scores, generos_dict, threshold=3.0):
+def detectar_e_remover_outliers(scores, generos_dict, threshold=2.0):
     """
     ETAPA 1: Detecção e Remoção de Outliers usando Z-score
 
@@ -98,7 +98,7 @@ def detectar_e_remover_outliers(scores, generos_dict, threshold=3.0):
     Args:
         scores: Dicionário {pessoa_id: score}
         generos_dict: Dicionário {pessoa_id: genero}
-        threshold: Limite de Z-score (padrão: 3.0)
+        threshold: Limite de Z-score (padrão: 2.0)
 
     Returns:
         Tupla (scores_limpos, resultado_detecao, info_outliers)
@@ -533,7 +533,7 @@ def main():
     scores_limpos, resultado_outliers, info_outliers = detectar_e_remover_outliers(
         scores_desempenho,
         generos_dict,
-        threshold=3.0
+        threshold=2.0
     )
 
     # ETAPA 2: Gera cenários (usando dados limpos)
