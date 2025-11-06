@@ -31,9 +31,9 @@ from src.analytics import (
 )
 from src.reports import (
     GraphGenerator,
-    ExcelReportGenerator,
-    DashboardGenerator
+    ExcelReportGenerator
 )
+from src.reports.dashboard_generator_v2 import DashboardGeneratorV2
 from src.reports.ppt_generator_v3 import PowerPointGeneratorV3
 
 
@@ -292,10 +292,15 @@ def gerar_cenarios(scores, generos_dict):
             print(f"  Status: ✅ SEM VIÉS\n")
 
         cenarios[f'cenario_{idx}'] = {
+            'numero': idx,  # Número do cenário
             'titulo': titulo,
             'descricao': descricao,
             'nivel_vies': nivel_vies,  # Nível de VIÉS aplicado
             'scores_por_genero': scores_por_genero_str,
+            'media_feminino': analise_cenario.estatisticas_feminino.media,  # Para dashboard
+            'media_masculino': analise_cenario.estatisticas_masculino.media,  # Para dashboard
+            'diferenca': analise_cenario.diferenca_medias,  # Para dashboard
+            'p_value': analise_cenario.p_value,  # Para dashboard
             'medias_antes': {
                 'Feminino': analise_limpos.estatisticas_feminino.media,
                 'Masculino': analise_limpos.estatisticas_masculino.media
@@ -479,25 +484,22 @@ def demo_powerpoint(cenarios, todos_graficos):
     return caminho
 
 
-def demo_dashboard(cenarios, pessoas, generos_dict, scores_desempenho, scores_potencial):
-    """Demonstra geração de Dashboard"""
+def demo_dashboard(cenarios, pessoas, generos_dict, scores_desempenho, scores_potencial, info_outliers=None):
+    """Demonstra geração de Dashboard HTML Premium para Apresentações"""
     print("\n" + "=" * 80)
-    print("DEMO 4: DASHBOARD HTML INTERATIVO".center(80))
+    print("DEMO 4: DASHBOARD HTML PREMIUM PARA APRESENTAÇÕES".center(80))
     print("=" * 80 + "\n")
 
-    generator = DashboardGenerator(output_dir="reports/dashboards")
+    generator = DashboardGeneratorV2(output_dir="reports/dashboards")
 
-    # Adiciona dados de desempenho vs potencial para todos os cenários
-    for key in cenarios.keys():
-        # Pega primeiras 30 pessoas
-        pessoas_subset = list(pessoas)[:30]
+    # Prepara dados completos para o dashboard
+    dados_completos = {
+        'cenarios': cenarios,
+        'pessoas': {p.id: p for p in pessoas},
+        'info_outliers': info_outliers
+    }
 
-        cenarios[key]['desempenho'] = [scores_desempenho.get(p.id, 7.0) for p in pessoas_subset]
-        cenarios[key]['potencial'] = [scores_potencial.get(p.id, 7.0) for p in pessoas_subset]
-        cenarios[key]['generos'] = [p.genero.value for p in pessoas_subset]
-        cenarios[key]['nomes'] = [p.nome for p in pessoas_subset]
-
-    caminho = generator.gerar_dashboard_completo(cenarios)
+    caminho = generator.gerar_dashboard_completo(dados_completos)
 
     print(f"\n✓ Dashboard HTML gerado!")
     print(f"  Localização: {caminho}")
@@ -546,8 +548,8 @@ def main():
     # Demo 3: PowerPoint
     ppt_path = demo_powerpoint(cenarios, graficos)
 
-    # Demo 4: Dashboard
-    dashboard_path = demo_dashboard(cenarios, pessoas, generos_dict, scores_desempenho, scores_potencial)
+    # Demo 4: Dashboard Premium
+    dashboard_path = demo_dashboard(cenarios, pessoas, generos_dict, scores_limpos, scores_potencial, info_outliers)
 
     # Resumo final
     print("\n" + "=" * 80)
