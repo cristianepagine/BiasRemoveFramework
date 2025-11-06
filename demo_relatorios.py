@@ -195,21 +195,27 @@ def detectar_e_remover_outliers(scores, generos_dict, threshold=2.0):
 
 def gerar_cenarios(scores, generos_dict):
     """
-    ETAPA 2: Gera os 7 cenários de análise - INVERTIDO: Cenário 1 SEM viés
+    ETAPA 2: Gera os 7 cenários de análise - BIDIRECIONAL
+
+    Cenários demonstram detecção de viés em AMBAS as direções:
+    - Cenário 1: SEM viés (baseline)
+    - Cenários 2-4: Viés CONTRA mulheres (homens favorecidos)
+    - Cenários 5-7: Viés CONTRA homens (mulheres favorecidas)
 
     IMPORTANTE: Esta função recebe scores já limpos de outliers!
     """
     print("=" * 80)
-    print("ETAPA 2: GERANDO 7 CENÁRIOS DE ANÁLISE".center(80))
+    print("ETAPA 2: GERANDO 7 CENÁRIOS DE ANÁLISE BIDIRECIONAL".center(80))
     print("=" * 80 + "\n")
-    print("NOTA: Cenário 1 = SEM viés (dados limpos)")
-    print("      Cenários 2-7 = COM viés progressivo (teste do framework)")
+    print("NOTA: Cenário 1 = SEM viés (baseline equitativo)")
+    print("      Cenários 2-4 = Viés CONTRA mulheres (homens favorecidos)")
+    print("      Cenários 5-7 = Viés CONTRA homens (mulheres favorecidas)")
     print("      Dados já passaram por limpeza de outliers (Etapa 1)\n")
 
     analyzer = BiasAnalyzer(threshold_vies=0.05, alpha=0.05)
     corrector = BiasCorrector()
 
-    # Primeiro, REMOVE qualquer viés existente para criar o Cenário 1 limpo
+    # Primeiro, REMOVE qualquer viés existente para criar baseline limpo
     resultado_limpeza = corrector.aplicar_reponderacao(
         scores, generos_dict, aplicar_correcao=True
     )
@@ -229,17 +235,22 @@ def gerar_cenarios(scores, generos_dict):
     # Analisa scores limpos
     analise_limpos = analyzer.analisar_vies_genero(scores_por_genero_limpos)
 
-    # Define 7 cenários - INVERTIDO!
-    # Cenário 1 = 0% viés (limpo)
-    # Cenários 2-7 = viés progressivo aplicado
+    # Define 7 cenários BIDIRECIONAIS
     cenarios = {}
-    niveis_vies = [0, 16.67, 33.33, 50, 66.67, 83.33, 100]  # 0% a 100% de VIÉS aplicado
 
-    for idx, nivel_vies in enumerate(niveis_vies, 1):
-        # Calcula quanto de viés aplicar
-        # Cenário 1: usa scores limpos
-        # Cenários 2-7: interpolam de volta para os scores originais (com viés)
+    # Configuração dos cenários:
+    # (direção_viés, intensidade_percentual, título, descrição)
+    configuracoes_cenarios = [
+        (None, 0, 'Sem Viés (Baseline)', 'Dados equitativos sem viés de gênero - estado ideal'),
+        ('contra_mulheres', 8, 'Viés Leve contra Mulheres', 'Homens recebem avaliações 8% superiores'),
+        ('contra_mulheres', 15, 'Viés Moderado contra Mulheres', 'Homens recebem avaliações 15% superiores'),
+        ('contra_mulheres', 25, 'Viés Severo contra Mulheres', 'Homens recebem avaliações 25% superiores'),
+        ('contra_homens', 8, 'Viés Leve contra Homens', 'Mulheres recebem avaliações 8% superiores'),
+        ('contra_homens', 15, 'Viés Moderado contra Homens', 'Mulheres recebem avaliações 15% superiores'),
+        ('contra_homens', 25, 'Viés Severo contra Homens', 'Mulheres recebem avaliações 25% superiores'),
+    ]
 
+    for idx, (direcao, intensidade, titulo_base, descricao) in enumerate(configuracoes_cenarios, 1):
         scores_por_genero_cenario = {
             Genero.FEMININO: [],
             Genero.MASCULINO: []
@@ -248,11 +259,23 @@ def gerar_cenarios(scores, generos_dict):
         for pessoa_id, score_limpo in scores_limpos.items():
             genero = generos_dict.get(pessoa_id)
             if genero in [Genero.FEMININO, Genero.MASCULINO]:
-                score_original = scores[pessoa_id]  # Score com viés
 
-                # Interpola de limpo para viesado
-                # 0% = totalmente limpo, 100% = totalmente viesado
-                score_final = score_limpo + (score_original - score_limpo) * (nivel_vies / 100.0)
+                if direcao is None:
+                    # Cenário 1: sem viés (usa score limpo)
+                    score_final = score_limpo
+                elif direcao == 'contra_mulheres':
+                    # Reduz scores femininos, mantém masculinos
+                    if genero == Genero.FEMININO:
+                        score_final = score_limpo * (1 - intensidade / 100.0)
+                    else:
+                        score_final = score_limpo
+                else:  # contra_homens
+                    # Reduz scores masculinos, mantém femininos
+                    if genero == Genero.MASCULINO:
+                        score_final = score_limpo * (1 - intensidade / 100.0)
+                    else:
+                        score_final = score_limpo
+
                 scores_por_genero_cenario[genero].append(score_final)
 
         # Converte para strings
@@ -264,24 +287,12 @@ def gerar_cenarios(scores, generos_dict):
         # Analisa
         analise_cenario = analyzer.analisar_vies_genero(scores_por_genero_cenario)
 
-        # Define título baseado no nível DE VIÉS
-        if nivel_vies == 0:
-            titulo = f'Cenário {idx} - Sem Viés (Dados Limpos)'
-            descricao = 'Dados equitativos sem viés de gênero - estado ideal'
-        elif nivel_vies < 50:
-            titulo = f'Cenário {idx} - Viés Leve ({nivel_vies:.0f}%)'
-            descricao = f'Viés leve aplicado ({nivel_vies:.0f}%) para teste do framework'
-        elif nivel_vies == 50:
-            titulo = f'Cenário {idx} - Viés Moderado ({nivel_vies:.0f}%)'
-            descricao = 'Viés moderado típico de cenários reais'
-        elif nivel_vies < 100:
-            titulo = f'Cenário {idx} - Viés Severo ({nivel_vies:.0f}%)'
-            descricao = f'Viés severo ({nivel_vies:.0f}%) para demonstração extrema'
-        else:
-            titulo = f'Cenário {idx} - Viés Máximo (100%)'
-            descricao = 'Viés máximo - pior cenário possível'
+        # Define título e detalhes
+        titulo = f'Cenário {idx} - {titulo_base}'
 
+        # Imprime resultados
         print(f"{titulo}")
+        print(f"  Descrição: {descricao}")
         print(f"  Média Feminino: {analise_cenario.estatisticas_feminino.media:.2f}")
         print(f"  Média Masculino: {analise_cenario.estatisticas_masculino.media:.2f}")
         print(f"  Diferença: {analise_cenario.diferenca_medias:.3f}")
@@ -292,10 +303,11 @@ def gerar_cenarios(scores, generos_dict):
             print(f"  Status: ✅ SEM VIÉS\n")
 
         cenarios[f'cenario_{idx}'] = {
-            'numero': idx,  # Número do cenário
+            'numero': idx,
             'titulo': titulo,
             'descricao': descricao,
-            'nivel_vies': nivel_vies,  # Nível de VIÉS aplicado
+            'nivel_vies': intensidade,  # Intensidade do viés aplicado
+            'direcao_vies': direcao,  # Direção do viés (contra_mulheres/contra_homens/None)
             'scores_por_genero': scores_por_genero_str,
             'media_feminino': analise_cenario.estatisticas_feminino.media,  # Para dashboard
             'media_masculino': analise_cenario.estatisticas_masculino.media,  # Para dashboard
