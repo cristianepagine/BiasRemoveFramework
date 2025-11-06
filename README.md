@@ -62,7 +62,7 @@ python src/main.py
 Os arquivos já estão disponíveis em `reports/`:
 - 📑 `reports/powerpoint/apresentacao_completa_exemplo.pptx` (51 slides)
 - 📋 `reports/excel/relatorio_vies_exemplo.xlsx` (4 abas)
-- 🌐 `reports/dashboards/dashboard_vies_exemplo.html` (interativo)
+- 🌐 `reports/dashboards/dashboard_v2_exemplo.html` (Premium - 23 gráficos interativos)
 - 🎨 `reports/graficos/` (42 gráficos PNG)
 
 **Opção 2: Gerar seus próprios relatórios** 🚀
@@ -75,7 +75,7 @@ Este script gera automaticamente:
 - ✅ **42 gráficos PNG** em alta resolução (300 DPI)
 - ✅ **Apresentação PowerPoint** completa (~50 slides)
 - ✅ **Relatório Excel** formatado (4 abas)
-- ✅ **Dashboard HTML** interativo
+- ✅ **Dashboard HTML Premium** (23 gráficos interativos Plotly, design profissional)
 
 **Os relatórios são salvos em:** `reports/`
 
