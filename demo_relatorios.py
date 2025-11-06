@@ -26,7 +26,8 @@ from src.evaluations import (
 )
 from src.analytics import (
     BiasAnalyzer,
-    BiasCorrector
+    BiasCorrector,
+    OutlierDetector
 )
 from src.reports import (
     GraphGenerator,
@@ -87,13 +88,123 @@ def preparar_dados_exemplo():
     return pessoas, generos_dict, scores_ninebox, scores_potencial, avaliacao_ninebox
 
 
-def gerar_cenarios(scores, generos_dict):
-    """Gera os 7 cenários de análise - INVERTIDO: Cenário 1 SEM viés"""
+def detectar_e_remover_outliers(scores, generos_dict, threshold=3.0):
+    """
+    ETAPA 1: Detecção e Remoção de Outliers usando Z-score
+
+    Esta etapa é crucial para garantir a qualidade dos dados antes da análise de viés.
+    Outliers podem distorcer as estatísticas e levar a conclusões incorretas.
+
+    Args:
+        scores: Dicionário {pessoa_id: score}
+        generos_dict: Dicionário {pessoa_id: genero}
+        threshold: Limite de Z-score (padrão: 3.0)
+
+    Returns:
+        Tupla (scores_limpos, resultado_detecao, info_outliers)
+    """
     print("=" * 80)
-    print("GERANDO 7 CENÁRIOS DE ANÁLISE".center(80))
+    print("ETAPA 1: DETECÇÃO DE OUTLIERS (Z-SCORE)".center(80))
+    print("=" * 80 + "\n")
+    print(f"Threshold: |Z| > {threshold} (valores que se afastam mais de {threshold} desvios padrão)\n")
+
+    detector = OutlierDetector(threshold=threshold)
+
+    # Extrai valores dos scores
+    ids = list(scores.keys())
+    valores = list(scores.values())
+
+    # Detecta outliers
+    resultado = detector.detectar_outliers(valores)
+
+    print(f"📊 Estatísticas dos dados originais:")
+    print(f"  Total de observações: {len(valores)}")
+    print(f"  Média: {resultado.media:.2f}")
+    print(f"  Desvio Padrão: {resultado.desvio_padrao:.2f}")
+    print(f"  Outliers detectados: {len(resultado.indices_outliers)}")
+
+    if resultado.indices_outliers:
+        print(f"\n⚠️  Outliers identificados (índices): {resultado.indices_outliers[:10]}")
+        if len(resultado.indices_outliers) > 10:
+            print(f"     ... e mais {len(resultado.indices_outliers) - 10}")
+
+        # Mostra alguns exemplos
+        print(f"\n  Exemplos de Z-scores extremos:")
+        z_sorted_idx = np.argsort(np.abs(resultado.z_scores))[::-1]
+        for i in range(min(5, len(resultado.indices_outliers))):
+            idx = z_sorted_idx[i]
+            if idx in resultado.indices_outliers:
+                pessoa_id = ids[idx]
+                genero = generos_dict.get(pessoa_id, "?")
+                print(f"    Pessoa {pessoa_id} ({genero.value if hasattr(genero, 'value') else genero}): "
+                      f"Score={valores[idx]:.2f}, Z-score={resultado.z_scores[idx]:.2f}")
+    else:
+        print(f"\n✅ Nenhum outlier detectado!")
+
+    # Remove outliers
+    scores_limpos = {}
+    ids_removidos = []
+
+    for i, pessoa_id in enumerate(ids):
+        if i in resultado.indices_outliers:
+            ids_removidos.append(pessoa_id)
+        else:
+            scores_limpos[pessoa_id] = scores[pessoa_id]
+
+    # Informações sobre outliers por gênero
+    outliers_por_genero = {
+        Genero.FEMININO: 0,
+        Genero.MASCULINO: 0,
+        Genero.OUTRO: 0
+    }
+
+    for pessoa_id in ids_removidos:
+        genero = generos_dict.get(pessoa_id)
+        if genero in outliers_por_genero:
+            outliers_por_genero[genero] += 1
+
+    print(f"\n📋 Resultado da limpeza:")
+    print(f"  Observações mantidas: {len(scores_limpos)}")
+    print(f"  Observações removidas: {len(ids_removidos)}")
+    print(f"  Taxa de remoção: {len(ids_removidos)/len(scores)*100:.1f}%")
+
+    if ids_removidos:
+        print(f"\n  Outliers por gênero:")
+        print(f"    Feminino: {outliers_por_genero[Genero.FEMININO]}")
+        print(f"    Masculino: {outliers_por_genero[Genero.MASCULINO]}")
+        if outliers_por_genero[Genero.OUTRO] > 0:
+            print(f"    Outro: {outliers_por_genero[Genero.OUTRO]}")
+
+    print(f"\n✓ Detecção de outliers concluída!\n")
+
+    info_outliers = {
+        'total_original': len(scores),
+        'total_limpo': len(scores_limpos),
+        'outliers_removidos': len(ids_removidos),
+        'ids_removidos': ids_removidos,
+        'outliers_por_genero': outliers_por_genero,
+        'media_original': resultado.media,
+        'desvio_original': resultado.desvio_padrao,
+        'threshold': threshold,
+        'z_scores': resultado.z_scores,
+        'indices_outliers': resultado.indices_outliers
+    }
+
+    return scores_limpos, resultado, info_outliers
+
+
+def gerar_cenarios(scores, generos_dict):
+    """
+    ETAPA 2: Gera os 7 cenários de análise - INVERTIDO: Cenário 1 SEM viés
+
+    IMPORTANTE: Esta função recebe scores já limpos de outliers!
+    """
+    print("=" * 80)
+    print("ETAPA 2: GERANDO 7 CENÁRIOS DE ANÁLISE".center(80))
     print("=" * 80 + "\n")
     print("NOTA: Cenário 1 = SEM viés (dados limpos)")
-    print("      Cenários 2-7 = COM viés progressivo (teste do framework)\n")
+    print("      Cenários 2-7 = COM viés progressivo (teste do framework)")
+    print("      Dados já passaram por limpeza de outliers (Etapa 1)\n")
 
     analyzer = BiasAnalyzer(threshold_vies=0.05, alpha=0.05)
     corrector = BiasCorrector()
@@ -398,13 +509,17 @@ def demo_dashboard(cenarios, pessoas, generos_dict, scores_desempenho, scores_po
 def main():
     """Função principal"""
     print("\n" + "=" * 80)
-    print("DEMONSTRAÇÃO DE RELATÓRIOS AUTOMATIZADOS - V3 ULTRA DETALHADA".center(80))
+    print("DEMONSTRAÇÃO DE RELATÓRIOS AUTOMATIZADOS - COM DETECÇÃO DE OUTLIERS".center(80))
     print("=" * 80)
-    print("\nEste script demonstra a geração automática de:")
-    print("  1. Gráficos PNG em alta resolução (56 gráficos = 8 por cenário)")
-    print("  2. Relatórios Excel formatados (4 abas, 7 cenários)")
-    print("  3. Apresentações PowerPoint ULTRA DETALHADAS (~70 slides)")
-    print("  4. Dashboard HTML interativo (7 abas, um cenário por aba)")
+    print("\nEste script demonstra o framework completo com:")
+    print("  ETAPA 1: Detecção e Remoção de Outliers (Z-score, threshold=3.0)")
+    print("  ETAPA 2: Análise de Viés de Gênero (7 cenários)")
+    print("  ETAPA 3: Geração de Relatórios Automatizados")
+    print("\nRelatórios gerados:")
+    print("  • Gráficos PNG em alta resolução (56 gráficos = 8 por cenário)")
+    print("  • Relatórios Excel formatados (4 abas, 7 cenários)")
+    print("  • Apresentações PowerPoint ULTRA DETALHADAS (~70 slides)")
+    print("  • Dashboard HTML interativo (7 abas, um cenário por aba)")
     print("\n  IMPORTANTE: Cenário 1 = SEM viés (dados limpos)")
     print("              Cenários 2-7 = COM viés progressivo (0% → 100%)")
     print("\n" + "=" * 80 + "\n")
@@ -412,8 +527,15 @@ def main():
     # Prepara dados
     pessoas, generos_dict, scores_desempenho, scores_potencial, avaliacao_ninebox = preparar_dados_exemplo()
 
-    # Gera cenários
-    cenarios, analise_antes, analise_depois = gerar_cenarios(scores_desempenho, generos_dict)
+    # ETAPA 1: Detecta e remove outliers
+    scores_limpos, resultado_outliers, info_outliers = detectar_e_remover_outliers(
+        scores_desempenho,
+        generos_dict,
+        threshold=3.0
+    )
+
+    # ETAPA 2: Gera cenários (usando dados limpos)
+    cenarios, analise_antes, analise_depois = gerar_cenarios(scores_limpos, generos_dict)
 
     # Demo 1: Gráficos
     graficos = demo_graficos(cenarios)
