@@ -8,7 +8,7 @@ Este diretório contém todos os relatórios gerados automaticamente pelo framew
 
 - 📑 **PowerPoint**: `reports/powerpoint/apresentacao_completa_exemplo.pptx` (6.1 MB, 51 slides)
 - 📋 **Excel**: `reports/excel/relatorio_vies_exemplo.xlsx` (8.1 KB, 4 abas)
-- 🌐 **Dashboard**: `reports/dashboards/dashboard_vies_exemplo.html` (328 KB, interativo)
+- 🌐 **Dashboard V2**: `reports/dashboards/dashboard_v2_exemplo.html` (222 KB, Premium com 23 gráficos interativos)
 
 **Como baixar:**
 1. Navegue até a pasta desejada no GitHub
@@ -62,12 +62,20 @@ pip install -r requirements.txt
 - **Formato:** Microsoft Excel 2007+ (.xlsx)
 - **Tamanho:** ~8 KB
 
-### 🌐 Dashboard HTML (`dashboards/`)
-- **Dashboard interativo** com 7 abas (uma por cenário)
-- **Gráficos interativos** usando Plotly
+### 🌐 Dashboard HTML V2 Premium (`dashboards/`)
+- **Dashboard Premium** com design profissional para apresentações
+- **23 gráficos interativos Plotly** (3 por cenário + resumo comparativo)
+- **Seções incluídas:**
+  - Introdução com metodologia completa
+  - Estatísticas de detecção de outliers (Z-score)
+  - Análise detalhada por cenário com cards de métricas
+  - Boxes de explicação e insights
+  - Resumo comparativo entre todos cenários
+  - Conclusão com principais achados
+- **Design:** Color-coded por nível de viés (verde/amarelo/vermelho)
 - **Exportável como PDF:** Abra no navegador e use Ctrl+P > Salvar como PDF
 - **Formato:** HTML5 com JavaScript embutido
-- **Tamanho:** ~328 KB
+- **Tamanho:** ~222 KB
 
 ## 📖 Cenários Analisados
 
