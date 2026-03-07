@@ -49,9 +49,35 @@ pip install -r requirements.txt
 
 ## Uso
 
+### Executar o Framework:
+
 ```bash
 python src/main.py
 ```
+
+### 📊 Relatórios Automatizados (PowerPoint, Excel, Dashboard HTML):
+
+**Opção 1: Baixar arquivos de exemplo prontos** 📥
+
+Os arquivos já estão disponíveis em `reports/`:
+- 📑 `reports/powerpoint/apresentacao_completa_exemplo.pptx` (51 slides)
+- 📋 `reports/excel/relatorio_vies_exemplo.xlsx` (4 abas)
+- 🌐 `reports/dashboards/dashboard_v2_exemplo.html` (Premium - 23 gráficos interativos)
+- 🎨 `reports/graficos/` (42 gráficos PNG)
+
+**Opção 2: Gerar seus próprios relatórios** 🚀
+
+```bash
+python gerar_relatorios.py
+```
+
+Este script gera automaticamente:
+- ✅ **42 gráficos PNG** em alta resolução (300 DPI)
+- ✅ **Apresentação PowerPoint** completa (~50 slides)
+- ✅ **Relatório Excel** formatado (4 abas)
+- ✅ **Dashboard HTML Premium** (23 gráficos interativos Plotly, design profissional)
+
+**Os relatórios são salvos em:** `reports/`
 
 ## Tecnologias
 
